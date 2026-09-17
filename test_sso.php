@@ -1,6 +1,6 @@
 <?php
 /**
- * Script de Teste do SSO / OIDC (Simulador do Sistema Receptor)
+ * SSO / OIDC Test Script (Client Application Simulator)
  */
 
 require_once(__DIR__ . '/../../config.php');
@@ -10,9 +10,9 @@ use Firebase\JWT\Key;
 
 global $DB, $CFG;
 
-// 1. DADOS DA APLICAÇÃO (Carrega o primeiro cliente cadastrado e ativo ou usa padrão)
-$client_id     = 'seu_clientid_cadastrado_aqui';
-$client_secret = 'client_secret_gerado_aqui';
+// 1. APPLICATION DATA (Loads the first registered active client or uses default placeholders)
+$client_id     = 'your_clientid_registered_here';
+$client_secret = 'client_secret_generated_here';
 
 $first_client = $DB->get_record('local_simple_sso_clients', ['enabled' => 1]);
 if ($first_client) {
@@ -20,60 +20,60 @@ if ($first_client) {
     $client_secret = $first_client->client_secret;
 }
 
-// 2. Configurações de URLs
+// 2. URL Configuration
 $moodle_authorize_url = $CFG->wwwroot . '/local/simple_sso/authorize.php';
 
 $protocol    = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
 $current_url = $protocol . "://" . $_SERVER['HTTP_HOST'] . strtok($_SERVER['REQUEST_URI'], '?');
 
 // --------------------------------------------------------------------------
-// ETAPA A: Recebe o Token JWT via URL e valida usando o Client Secret
+// STEP A: Receives JWT Token via URL and validates using Client Secret
 // --------------------------------------------------------------------------
 if (isset($_GET['token'])) {
     $token = $_GET['token'];
 
     try {
-        // Valida a assinatura do token exclusivamente com o secret do cliente
+        // Validates token signature exclusively using client secret
         $decoded = JWT::decode($token, new Key($client_secret, 'HS256'));
         $data    = (array)$decoded;
 
-        echo "<h1>✅ SSO Multi-Tenant / OIDC Autenticado com Sucesso!</h1>";
+        echo "<h1>✅ Multi-Tenant SSO / OIDC Authenticated Successfully!</h1>";
         echo "<hr>";
-        echo "<h3>Payload do Token JWT Decodificado:</h3>";
+        echo "<h3>Decoded JWT Token Payload:</h3>";
         echo "<pre style='background:#f4f4f4; padding:15px; border-radius:5px;'>";
         print_r($data);
         echo "</pre>";
 
-        echo "<p><strong>Cliente Autorizado (aud):</strong> " . htmlspecialchars($data['aud'] ?? '') . "</p>";
-        echo "<p><strong>Usuário (sub):</strong> " . htmlspecialchars($data['sub'] ?? '') . "</p>";
-        echo "<p><strong>E-mail:</strong> " . htmlspecialchars($data['email'] ?? '') . "</p>";
-        echo "<p><strong>Nome Completo:</strong> " . htmlspecialchars(($data['firstname'] ?? '') . ' ' . ($data['lastname'] ?? '')) . "</p>";
+        echo "<p><strong>Authorized Client (aud):</strong> " . htmlspecialchars($data['aud'] ?? '') . "</p>";
+        echo "<p><strong>User (sub):</strong> " . htmlspecialchars($data['sub'] ?? '') . "</p>";
+        echo "<p><strong>Email:</strong> " . htmlspecialchars($data['email'] ?? '') . "</p>";
+        echo "<p><strong>Full Name:</strong> " . htmlspecialchars(($data['firstname'] ?? '') . ' ' . ($data['lastname'] ?? '')) . "</p>";
         
         $groups = isset($data['groups']) ? (array)$data['groups'] : [];
-        echo "<p><strong>Grupos/Coortes:</strong> " . htmlspecialchars(implode(', ', $groups)) . "</p>";
+        echo "<p><strong>Groups/Cohorts:</strong> " . htmlspecialchars(implode(', ', $groups)) . "</p>";
         
-        echo "<br><a href='" . htmlspecialchars($current_url) . "'>🔄 Testar novamente</a>";
+        echo "<br><a href='" . htmlspecialchars($current_url) . "'>🔄 Test again</a>";
         exit;
 
     } catch (Exception $e) {
-        echo "<h1 style='color:red;'>❌ Falha na Validação do Token</h1>";
-        echo "<p><strong>Erro:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
-        echo "<br><a href='" . htmlspecialchars($current_url) . "'>Tentar Novamente</a>";
+        echo "<h1 style='color:red;'>❌ Token Validation Failed</h1>";
+        echo "<p><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
+        echo "<br><a href='" . htmlspecialchars($current_url) . "'>Try Again</a>";
         exit;
     }
 }
 
 // --------------------------------------------------------------------------
-// ETAPA B: Redireciona para o Endpoint de Autorização do Moodle
+// STEP B: Redirects to Moodle Authorization Endpoint
 // --------------------------------------------------------------------------
 $sso_login_url = $moodle_authorize_url . '?client_id=' . urlencode($client_id) . '&redirect_uri=' . urlencode($current_url);
 ?>
 
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Teste Multi-Tenant SSO</title>
+    <title>Multi-Tenant SSO Test</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
         .btn {
@@ -89,11 +89,11 @@ $sso_login_url = $moodle_authorize_url . '?client_id=' . urlencode($client_id) .
     </style>
 </head>
 <body>
-    <h2>Sistema Consumidor (Teste Multi-tenant / OIDC)</h2>
-    <p>A aplicação enviará o <code>client_id</code> (<strong><?php echo htmlspecialchars($client_id); ?></strong>) e a <code>redirect_uri</code> para o endpoint <code>/authorize.php</code>.</p>
+    <h2>Consumer Application (Multi-tenant / OIDC Test)</h2>
+    <p>The application will send <code>client_id</code> (<strong><?php echo htmlspecialchars($client_id); ?></strong>) and <code>redirect_uri</code> to the <code>/authorize.php</code> endpoint.</p>
     
     <a href="<?php echo htmlspecialchars($sso_login_url); ?>" class="btn">
-        Entrar via Moodle SSO
+        Login via Moodle SSO
     </a>
 </body>
 </html>
