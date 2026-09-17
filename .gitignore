@@ -1,0 +1,14 @@
+# IDE settings
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
