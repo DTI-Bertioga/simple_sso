@@ -1,9 +1,9 @@
 <?php
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = 'Autenticação Simples SSO / OIDC';
-$string['jwt_settings'] = 'Configurações Globais do Token JWT';
-$string['invalidredirecturl'] = 'URL de redirecionamento inválida ou ausente.';
-$string['invalidclient'] = 'Cliente não encontrado ou inativo.';
-$string['invalidredirecturi'] = 'A URL de redirecionamento não está autorizada na lista branca.';
-$string['jwterror'] = 'Erro ao gerar ou assinar o token JWT.';
+$string['pluginname'] = 'Simple SSO / OIDC Authentication';
+$string['jwt_settings'] = 'Global JWT Token Settings';
+$string['invalidredirecturl'] = 'Invalid or missing redirect URL.';
+$string['invalidclient'] = 'Client not found or disabled.';
+$string['invalidredirecturi'] = 'The redirect URL is not authorized in the whitelist.';
+$string['jwterror'] = 'Error generating or signing the JWT token.';
