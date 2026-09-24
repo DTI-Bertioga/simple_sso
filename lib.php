@@ -75,3 +75,56 @@ function local_simple_sso_validate_redirect_uri(string $redirect_uri, string $al
 
     return false;
 }
+
+/**
+ * Registra um evento de auditoria ou tentativa de autenticação na tabela local_simple_sso_logs.
+ *
+ * @param string $eventtype Tipo do evento (ex: 'login_success', 'login_failed_uri', 'client_created', 'client_deleted', 'userinfo_access').
+ * @param string $status Status do evento ('SUCCESS', 'BLOCKED', 'ERROR').
+ * @param string $client_id ID do cliente/aplicação (opcional).
+ * @param string $redirect_uri URL de redirecionamento enviada na requisição (opcional).
+ * @param string $failure_reason Motivo da falha ou observação (opcional).
+ * @param string $endpoint Nome do arquivo/endpoint executado (opcional, detectado automaticamente se vazio).
+ * @param int|null $userid ID do usuário Moodle (se nulo, pega de $USER->id).
+ * @return bool True se gravado com sucesso.
+ */
+function local_simple_sso_log_event(
+    string $eventtype,
+    string $status = 'SUCCESS',
+    string $client_id = '',
+    string $redirect_uri = '',
+    string $failure_reason = '',
+    string $endpoint = '',
+    ?int $userid = null
+): bool {
+    global $DB, $USER;
+
+    try {
+        if ($userid === null) {
+            $userid = (!empty($USER) && isset($USER->id)) ? (int)$USER->id : 0;
+        }
+
+        if (empty($endpoint)) {
+            $endpoint = basename($_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? 'unknown');
+        }
+
+        $log = new \stdClass();
+        $log->client_id      = substr($client_id, 0, 100);
+        $log->userid         = $userid;
+        $log->eventtype      = substr($eventtype, 0, 50);
+        $log->status         = substr($status, 0, 20);
+        $log->endpoint       = substr($endpoint, 0, 100);
+        $log->http_method    = substr($_SERVER['REQUEST_METHOD'] ?? 'GET', 0, 10);
+        $log->redirect_uri   = $redirect_uri;
+        $log->failure_reason = $failure_reason;
+        $log->ip             = getremoteaddr();
+        $log->user_agent     = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $log->timecreated    = time();
+
+        $DB->insert_record('local_simple_sso_logs', $log);
+        return true;
+    } catch (\Exception $e) {
+        // Falha no log não deve interromper o fluxo principal
+        return false;
+    }
+}

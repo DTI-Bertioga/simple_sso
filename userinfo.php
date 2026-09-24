@@ -1,5 +1,6 @@
 <?php
 require_once(__DIR__ . '/../../config.php');
+require_once(__DIR__ . '/lib.php');
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
@@ -19,6 +20,7 @@ if (empty($auth_header)) {
 }
 
 if (!preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+    local_simple_sso_log_event('userinfo_access_failed', 'BLOCKED', '', '', 'Bearer token não fornecido.');
     http_response_code(401);
     echo json_encode(['error' => 'missing_token', 'error_description' => 'Bearer token não fornecido.']);
     exit;
@@ -67,13 +69,21 @@ if (!empty($client_id)) {
 }
 
 if (!$decoded) {
+    local_simple_sso_log_event('userinfo_access_failed', 'BLOCKED', $client_id ?? '', '', 'Token JWT inválido ou expirado.');
     http_response_code(401);
     echo json_encode(['error' => 'invalid_token', 'error_description' => 'Token JWT inválido ou expirado.']);
     exit;
 }
 
-// 4. Retorna as informações no formato OIDC UserInfo
+// Retorna as informações no formato OIDC UserInfo e registra log
 $user_data = (array)$decoded;
+
+// Se disponível no token, tenta resolver a userid pelo username
+$user_id_obj = $DB->get_record('user', ['username' => $user_data['sub'] ?? ''], 'id');
+$moodle_userid = $user_id_obj ? (int)$user_id_obj->id : 0;
+
+local_simple_sso_log_event('userinfo_access', 'SUCCESS', $user_data['aud'] ?? $client_id ?? '', '', '', '', $moodle_userid);
+
 echo json_encode([
     'sub'                => $user_data['sub'],
     'email'              => $user_data['email'],

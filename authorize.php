@@ -14,11 +14,13 @@ $response_type= optional_param('response_type', 'token', PARAM_ALPHA); // 'token
 // 1. Busca e valida a Aplicação (Client ID)
 $client = $DB->get_record('local_simple_sso_clients', ['client_id' => $client_id, 'enabled' => 1]);
 if (!$client) {
+    local_simple_sso_log_event('login_failed_client', 'BLOCKED', $client_id, $redirect_uri, 'Client ID inválido ou desativado.');
     print_error('invalidclient', 'local_simple_sso', '', 'Client ID inválido ou desativado.');
 }
 
 // 2. Validação da Lista Branca de Domínios (Allowed Redirect URIs)
 if (!local_simple_sso_validate_redirect_uri($redirect_uri, $client->redirect_uri)) {
+    local_simple_sso_log_event('login_failed_uri', 'BLOCKED', $client_id, $redirect_uri, 'A URL de redirecionamento informada não está autorizada na Lista Branca.');
     print_error('invalidredirecturi', 'local_simple_sso', '', 'A URL de redirecionamento informada não está autorizada na Lista Branca.');
 }
 
@@ -52,8 +54,12 @@ try {
     // Assina usando o Client Secret do próprio cliente
     $jwt = JWT::encode($payload, $client->client_secret, 'HS256');
 } catch (Exception $e) {
+    local_simple_sso_log_event('login_error_jwt', 'ERROR', $client_id, $redirect_uri, $e->getMessage());
     print_error('jwterror', 'local_simple_sso', '', $e->getMessage());
 }
+
+// Registra log de sucesso da autenticação
+local_simple_sso_log_event('login_success', 'SUCCESS', $client_id, $redirect_uri);
 
 // 5. Redireciona de volta para a aplicação autorizada
 $delimiter = (strpos($redirect_uri, '?') !== false) ? '&' : '?';
