@@ -35,9 +35,10 @@ Allows integrating third-party external applications (such as GLPI, corporate po
    git clone https://github.com/DTI-Bertioga/simple_sso.git simple_sso
    ```
    *Or copy the `simple_sso` directory into `local/` so the path becomes `/local/simple_sso/`.*
+   *Or Navigate to https://your.moodle.server/admin/tool/installaddon/index.php and install using a zip file of simple_sso directory.*
 
-2. Log in to Moodle as an Administrator and navigate to **Site administration ➔ Notifications**.
-3. Moodle will detect the database schema tables (`mdl_local_simple_sso_clients` and `mdl_local_simple_sso_logs`) and prompt for the database installation/upgrade. Complete the installation.
+2. Log in to Moodle as an Administrator and navigate to **Site administration ➔ Plugins**.
+3. Moodle will detect the new plugin and prompt for the installation/upgrade. Complete the installation.
 
 ---
 

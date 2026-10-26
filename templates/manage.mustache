@@ -1,0 +1,117 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_simple_sso/manage
+
+    Management interface template for local_simple_sso.
+}}
+
+<div class="alert alert-info">
+    <h5>{{#str}} endpoints_title, local_simple_sso {{/str}}</h5>
+    <ul>
+        <li><b>{{#str}} endpoint_authorization, local_simple_sso {{/str}}:</b> <code>{{baseurl}}/authorize.php</code></li>
+        <li><b>{{#str}} endpoint_login, local_simple_sso {{/str}}:</b> <code>{{baseurl}}/login.php</code></li>
+        <li><b>{{#str}} endpoint_token, local_simple_sso {{/str}}:</b> <code>{{baseurl}}/token.php</code></li>
+        <li><b>{{#str}} endpoint_userinfo, local_simple_sso {{/str}}:</b> <code>{{baseurl}}/userinfo.php</code></li>
+    </ul>
+</div>
+
+<div class="card p-3 mb-4">
+    <h4>{{#str}} registered_applications, local_simple_sso {{/str}}</h4>
+    <table class="table table-striped table-bordered align-middle">
+        <thead>
+            <tr>
+                <th>{{#str}} col_name, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_client_id, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_client_secret, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_redirect_uris, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_actions, local_simple_sso {{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#hasclients}}
+                {{#clients}}
+                <tr>
+                    <td><b>{{name}}</b></td>
+                    <td><code>{{clientid}}</code></td>
+                    <td><code>{{clientsecret}}</code></td>
+                    <td><small>{{{redirecturi}}}</small></td>
+                    <td><a href="{{deleteurl}}" class="btn btn-sm btn-danger" onclick="return confirm('{{#str}} confirm_delete_client, local_simple_sso {{/str}}');">{{#str}} delete, local_simple_sso {{/str}}</a></td>
+                </tr>
+                {{/clients}}
+            {{/hasclients}}
+            {{^hasclients}}
+                <tr><td colspan="5" class="text-muted text-center">{{#str}} no_clients, local_simple_sso {{/str}}</td></tr>
+            {{/hasclients}}
+        </tbody>
+    </table>
+</div>
+
+<form method="post" action="{{actionurl}}" class="card p-3 mb-4">
+    <input type="hidden" name="sesskey" value="{{sesskey}}">
+    <input type="hidden" name="action" value="addclient">
+    <h4>{{#str}} add_new_application, local_simple_sso {{/str}}</h4>
+    <div class="form-group mb-3">
+        <label for="client_name"><b>{{#str}} app_name, local_simple_sso {{/str}}</b></label>
+        <input type="text" id="client_name" name="client_name" class="form-control" required placeholder="{{#str}} app_name_placeholder, local_simple_sso {{/str}}">
+    </div>
+    <div class="form-group mb-3">
+        <label for="client_redirect_uri"><b>{{#str}} allowed_redirect_uris, local_simple_sso {{/str}}</b></label>
+        <textarea id="client_redirect_uri" name="client_redirect_uri" class="form-control" rows="3" required placeholder="{{#str}} redirect_uris_placeholder, local_simple_sso {{/str}}"></textarea>
+        <small class="text-muted">{{#str}} redirect_uris_help, local_simple_sso {{/str}}</small>
+    </div>
+    <div><button type="submit" class="btn btn-primary">{{#str}} save_application, local_simple_sso {{/str}}</button></div>
+</form>
+
+<div class="card p-3 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">{{#str}} audit_logs_title, local_simple_sso {{/str}}</h4>
+        <a href="{{clearlogsurl}}" class="btn btn-sm btn-outline-danger" onclick="return confirm('{{#str}} confirm_clear_logs, local_simple_sso {{/str}}');">{{#str}} clear_logs, local_simple_sso {{/str}}</a>
+    </div>
+
+    <table class="table table-sm table-striped table-hover table-bordered align-middle">
+        <thead>
+            <tr>
+                <th>{{#str}} col_datetime, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_event, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_status, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_client_id, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_user, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_ip, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_details, local_simple_sso {{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#haslogs}}
+                {{#logs}}
+                <tr>
+                    <td><small>{{datetime}}</small></td>
+                    <td><code>{{eventtype}}</code></td>
+                    <td>{{{statusbadge}}}</td>
+                    <td><code>{{clientid}}</code></td>
+                    <td><small>{{userdisplay}}</small></td>
+                    <td><small><code>{{ip}}</code></small></td>
+                    <td><small>{{{details}}}</small></td>
+                </tr>
+                {{/logs}}
+            {{/haslogs}}
+            {{^haslogs}}
+                <tr><td colspan="7" class="text-muted text-center">{{#str}} no_logs, local_simple_sso {{/str}}</td></tr>
+            {{/haslogs}}
+        </tbody>
+    </table>
+</div>
