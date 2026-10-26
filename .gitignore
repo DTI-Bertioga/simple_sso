@@ -12,3 +12,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local testing script (ignored from releases)
+test_sso.php

@@ -50,7 +50,7 @@ Allows integrating third-party external applications (such as GLPI, corporate po
    - **Allowed Redirect URIs (Whitelist):** Enter the authorized callback URLs where Moodle is permitted to redirect users after login (one URL per line). Example:
      ```text
      https://requests.company.com/callback
-     http://localhost/local/simple_sso/test_sso.php
+     https://sistemas.company.com/sso/login
      ```
 3. Click **Save Application**.
 4. Copy the generated `client_id` and `client_secret`.
@@ -64,26 +64,10 @@ Navigate to the bottom of the **Manage SSO Applications** page to view the **Aud
 
 | Endpoint | URL | Method | Description |
 | :--- | :--- | :--- | :--- |
-| **Authorization** | `/local/simple_sso/authorize.php` | `GET` | Initiates the SSO flow. Requires `client_id` and `redirect_uri`. Redirects back appending `?token=<JWT>`. |
+| **Authorization** | `/local/simple_sso/authorize.php` | `GET` | Initiates the SSO flow. Requires `client_id` and `redirect_uri`. Redirects back with token in URL fragment or query parameter. |
 | **Login (Alias)** | `/local/simple_sso/login.php` | `GET` | Simplified SSO login endpoint with `client_id` and whitelist validation. |
-| **Token** | `/local/simple_sso/token.php` | `POST` / `GET` | Validates client credentials (`client_id` and `client_secret`). |
+| **Token** | `/local/simple_sso/token.php` | `POST` | Validates client credentials and issues a signed JWT access token in JSON body. |
 | **UserInfo** | `/local/simple_sso/userinfo.php` | `GET` | Returns user profile data in JSON. Requires `Authorization: Bearer <JWT>` header. |
-
----
-
-## 🧪 Testing the Integration
-
-The plugin includes a test simulator script in `test_sso.php`:
-
-1. Ensure you have registered at least one application with the simulator URL added to the whitelist:
-   `http://your-moodle.com/local/simple_sso/test_sso.php` (or `https://...`).
-2. Open the test URL in your browser:
-   ```text
-   http://your-moodle.com/local/simple_sso/test_sso.php
-   ```
-3. Click the **Login via Moodle SSO** button.
-4. The system will redirect to `/authorize.php`, authenticate your Moodle session, and redirect back to the test page.
-5. Upon successful authentication, the decoded **JWT Payload** will be displayed, showing the user ID (`sub`), email, name, and assigned cohorts/groups.
 
 ---
 
@@ -102,13 +86,14 @@ local/simple_sso/
 │   │   └── local_simple_sso.php # English language pack and privacy metadata
 │   └── pt_br/
 │       └── local_simple_sso.php # Brazilian Portuguese language pack
+├── templates/
+│   └── manage.mustache      # Mustache UI template for management page
 ├── authorize.php            # Main SSO / OIDC authorization endpoint
-├── lib.php                  # Helper functions (strict parse_url URL validation & audit logging)
+├── lib.php                  # Helper functions (strict URL validation & audit logging)
 ├── login.php                # Secure login endpoint with client verification
 ├── manage.php               # Administrative management UI and Audit Logs viewer
 ├── settings.php             # Moodle administration menu registration
-├── test_sso.php             # Test simulator script for integration testing
-├── token.php                # OIDC client credentials validation endpoint
+├── token.php                # OIDC client credentials validation & token endpoint
 ├── userinfo.php             # OIDC UserInfo endpoint (returns JSON profile)
 ├── version.php              # Moodle plugin version control
 └── README.md                # Documentation and usage guide
