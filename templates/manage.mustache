@@ -17,7 +17,7 @@
 {{!
     @template local_simple_sso/manage
 
-    Management interface template for local_simple_sso.
+    Management interface template for local_simple_sso with Allowed Audience support.
 }}
 
 <div class="alert alert-info">
@@ -39,6 +39,7 @@
                 <th>{{#str}} col_client_id, local_simple_sso {{/str}}</th>
                 <th>{{#str}} col_client_secret, local_simple_sso {{/str}}</th>
                 <th>{{#str}} col_redirect_uris, local_simple_sso {{/str}}</th>
+                <th>{{#str}} col_audience, local_simple_sso {{/str}}</th>
                 <th>{{#str}} col_actions, local_simple_sso {{/str}}</th>
             </tr>
         </thead>
@@ -50,12 +51,25 @@
                     <td><code>{{clientid}}</code></td>
                     <td><code>{{clientsecret}}</code></td>
                     <td><small>{{{redirecturi}}}</small></td>
+                    <td>
+                        <div class="mb-1">{{{audiencebadge}}}</div>
+                        <form method="post" action="{{actionurl}}" class="d-inline-block mt-1">
+                            <input type="hidden" name="sesskey" value="{{sesskey}}">
+                            <input type="hidden" name="action" value="updateaudience">
+                            <input type="hidden" name="id" value="{{id}}">
+                            <select name="allowed_audience" class="form-select form-select-sm d-inline-block w-auto" onchange="this.form.submit()" style="font-size: 0.8rem;">
+                                <option value="todos" {{#is_todos}}selected{{/is_todos}}>{{#str}} audience_todos, local_simple_sso {{/str}}</option>
+                                <option value="servidor" {{#is_servidor}}selected{{/is_servidor}}>{{#str}} audience_servidor, local_simple_sso {{/str}}</option>
+                                <option value="contribuinte" {{#is_contribuinte}}selected{{/is_contribuinte}}>{{#str}} audience_contribuinte, local_simple_sso {{/str}}</option>
+                            </select>
+                        </form>
+                    </td>
                     <td><a href="{{deleteurl}}" class="btn btn-sm btn-danger" onclick="return confirm('{{#str}} confirm_delete_client, local_simple_sso {{/str}}');">{{#str}} delete, local_simple_sso {{/str}}</a></td>
                 </tr>
                 {{/clients}}
             {{/hasclients}}
             {{^hasclients}}
-                <tr><td colspan="5" class="text-muted text-center">{{#str}} no_clients, local_simple_sso {{/str}}</td></tr>
+                <tr><td colspan="6" class="text-muted text-center">{{#str}} no_clients, local_simple_sso {{/str}}</td></tr>
             {{/hasclients}}
         </tbody>
     </table>
@@ -66,11 +80,20 @@
     <input type="hidden" name="action" value="addclient">
     <h4>{{#str}} add_new_application, local_simple_sso {{/str}}</h4>
     <div class="form-group mb-3">
-        <label for="client_name"><b>{{#str}} app_name, local_simple_sso {{/str}}</b></label>
+        <label for="client_name"><b>{{#str}} app_name, local_simple_sso {{/str}} *</b></label>
         <input type="text" id="client_name" name="client_name" class="form-control" required placeholder="{{#str}} app_name_placeholder, local_simple_sso {{/str}}">
     </div>
     <div class="form-group mb-3">
-        <label for="client_redirect_uri"><b>{{#str}} allowed_redirect_uris, local_simple_sso {{/str}}</b></label>
+        <label for="allowed_audience"><b>{{#str}} audience_label, local_simple_sso {{/str}} *</b></label>
+        <select id="allowed_audience" name="allowed_audience" class="form-control" style="border-radius: 4px;">
+            <option value="todos">{{#str}} audience_todos, local_simple_sso {{/str}}</option>
+            <option value="servidor" selected>{{#str}} audience_servidor, local_simple_sso {{/str}}</option>
+            <option value="contribuinte">{{#str}} audience_contribuinte, local_simple_sso {{/str}}</option>
+        </select>
+        <small class="text-muted">{{#str}} audience_help, local_simple_sso {{/str}}</small>
+    </div>
+    <div class="form-group mb-3">
+        <label for="client_redirect_uri"><b>{{#str}} allowed_redirect_uris, local_simple_sso {{/str}} *</b></label>
         <textarea id="client_redirect_uri" name="client_redirect_uri" class="form-control" rows="3" required placeholder="{{#str}} redirect_uris_placeholder, local_simple_sso {{/str}}"></textarea>
         <small class="text-muted">{{#str}} redirect_uris_help, local_simple_sso {{/str}}</small>
     </div>

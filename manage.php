@@ -37,26 +37,42 @@ $PAGE->set_heading(get_string('pluginname', 'local_simple_sso'));
 
 // 1. Process New Application Registration.
 if (optional_param('action', '', PARAM_ALPHA) === 'addclient' && confirm_sesskey()) {
-    $name         = required_param('client_name', PARAM_TEXT);
-    $redirect_uri = required_param('client_redirect_uri', PARAM_RAW);
+    $name             = required_param('client_name', PARAM_TEXT);
+    $redirect_uri     = required_param('client_redirect_uri', PARAM_RAW);
+    $allowed_audience = optional_param('allowed_audience', 'todos', PARAM_ALPHA);
 
     $client = new stdClass();
-    $client->name          = $name;
-    $client->client_id     = 'client_' . bin2hex(random_bytes(8));
-    $client->client_secret = bin2hex(random_bytes(24));
-    $client->redirect_uri  = trim($redirect_uri);
-    $client->enabled       = 1;
-    $client->timecreated   = time();
+    $client->name             = $name;
+    $client->client_id        = 'client_' . bin2hex(random_bytes(8));
+    $client->client_secret    = bin2hex(random_bytes(24));
+    $client->redirect_uri     = trim($redirect_uri);
+    $client->allowed_audience = in_array($allowed_audience, ['servidor', 'contribuinte', 'todos'], true) ? $allowed_audience : 'todos';
+    $client->enabled          = 1;
+    $client->timecreated      = time();
 
     $DB->insert_record('local_simple_sso_clients', $client);
 
     // Log audit event.
-    local_simple_sso_log_event('client_created', 'SUCCESS', $client->client_id, $client->redirect_uri, "Application '{$name}' created.");
+    local_simple_sso_log_event('client_created', 'SUCCESS', $client->client_id, $client->redirect_uri, "Application '{$name}' created (Audience: {$client->allowed_audience}).");
 
     redirect(new moodle_url('/local/simple_sso/manage.php'), get_string('client_added_success', 'local_simple_sso', $name), null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
-// 2. Process Application Deletion.
+// 2. Process Application Audience Update.
+if (optional_param('action', '', PARAM_ALPHA) === 'updateaudience' && confirm_sesskey()) {
+    $client_id_num = required_param('id', PARAM_INT);
+    $new_aud       = optional_param('allowed_audience', 'todos', PARAM_ALPHA);
+
+    $c = $DB->get_record('local_simple_sso_clients', ['id' => $client_id_num]);
+    if ($c) {
+        $aud_clean = in_array($new_aud, ['servidor', 'contribuinte', 'todos'], true) ? $new_aud : 'todos';
+        $DB->set_field('local_simple_sso_clients', 'allowed_audience', $aud_clean, ['id' => $client_id_num]);
+        local_simple_sso_log_event('client_updated', 'SUCCESS', $c->client_id, '', "Application '{$c->name}' audience updated to '{$aud_clean}'.");
+    }
+    redirect(new moodle_url('/local/simple_sso/manage.php'), get_string('client_updated_success', 'local_simple_sso'), null, \core\output\notification::NOTIFY_SUCCESS);
+}
+
+// 3. Process Application Deletion.
 if (optional_param('action', '', PARAM_ALPHA) === 'deleteclient' && confirm_sesskey()) {
     $client_id_num = required_param('id', PARAM_INT);
     $c = $DB->get_record('local_simple_sso_clients', ['id' => $client_id_num]);
@@ -67,7 +83,7 @@ if (optional_param('action', '', PARAM_ALPHA) === 'deleteclient' && confirm_sess
     redirect(new moodle_url('/local/simple_sso/manage.php'), get_string('client_deleted_success', 'local_simple_sso'), null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
-// 3. Process Audit Logs Clear Action.
+// 4. Process Audit Logs Clear Action.
 if (optional_param('action', '', PARAM_ALPHA) === 'clearlogs' && confirm_sesskey()) {
     $DB->delete_records('local_simple_sso_logs');
     local_simple_sso_log_event('logs_cleared', 'SUCCESS', '', '', 'Audit logs cleared by administrator.');
@@ -89,12 +105,29 @@ foreach ($clients_records as $c) {
         'id'      => $c->id,
         'sesskey' => sesskey()
     ]);
+
+    $aud = $c->allowed_audience ?? 'todos';
+    $aud_badge = '';
+    if ($aud === 'servidor') {
+        $aud_badge = '<span class="badge bg-primary text-white p-2 font-weight-bold" style="background-color: #1351b4 !important;"><i class="fa fa-user-tie mr-1"></i> Apenas Servidores</span>';
+    } else if ($aud === 'contribuinte') {
+        $aud_badge = '<span class="badge bg-info text-white p-2 font-weight-bold" style="background-color: #17a2b8 !important;"><i class="fa fa-users mr-1"></i> Apenas Contribuintes</span>';
+    } else {
+        $aud_badge = '<span class="badge bg-secondary text-white p-2 font-weight-bold" style="background-color: #6c757d !important;"><i class="fa fa-globe mr-1"></i> Todos os Usuários</span>';
+    }
+
     $clients_data[] = [
-        'name'         => s($c->name),
-        'clientid'     => s($c->client_id),
-        'clientsecret' => s($c->client_secret),
-        'redirecturi'  => nl2br(s($c->redirect_uri)),
-        'deleteurl'    => $del_url->out(false),
+        'id'               => $c->id,
+        'name'             => s($c->name),
+        'clientid'         => s($c->client_id),
+        'clientsecret'     => s($c->client_secret),
+        'redirecturi'      => nl2br(s($c->redirect_uri)),
+        'audience'         => $aud,
+        'audiencebadge'    => $aud_badge,
+        'is_todos'         => ($aud === 'todos'),
+        'is_servidor'      => ($aud === 'servidor'),
+        'is_contribuinte'  => ($aud === 'contribuinte'),
+        'deleteurl'        => $del_url->out(false),
     ];
 }
 

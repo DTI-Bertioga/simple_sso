@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/simple_sso/db" VERSION="2026080303" COMMENT="Tabela de Aplicações SSO/OIDC e Logs de Auditoria">
+<XMLDB PATH="local/simple_sso/db" VERSION="20261105" COMMENT="Tabela de Aplicações SSO/OIDC, Códigos de Autorização PKCE e Logs de Auditoria">
   <TABLES>
     <TABLE NAME="local_simple_sso_clients" COMMENT="Aplicações autorizadas no SSO">
       <FIELDS>
@@ -8,6 +8,7 @@
         <FIELD NAME="client_id" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="client_secret" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="redirect_uri" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="URLs permitidas separadas por quebra de linha"/>
+        <FIELD NAME="allowed_audience" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="todos" SEQUENCE="false" COMMENT="servidor, contribuinte, todos"/>
         <FIELD NAME="enabled" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
       </FIELDS>
@@ -15,6 +16,28 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
         <KEY NAME="client_id_uniq" TYPE="unique" FIELDS="client_id"/>
       </KEYS>
+    </TABLE>
+    <TABLE NAME="local_simple_sso_codes" COMMENT="Códigos de autorização temporários para fluxo PKCE e OAuth2">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="code" TYPE="char" LENGTH="128" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="client_id" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="redirect_uri" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="code_challenge" TYPE="char" LENGTH="128" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="code_challenge_method" TYPE="char" LENGTH="10" NOTNULL="false" DEFAULT="S256" SEQUENCE="false"/>
+        <FIELD NAME="expires_at" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="code_uniq" TYPE="unique" FIELDS="code"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="client_id_idx" UNIQUE="false" FIELDS="client_id"/>
+        <INDEX NAME="userid_idx" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="expires_at_idx" UNIQUE="false" FIELDS="expires_at"/>
+      </INDEXES>
     </TABLE>
     <TABLE NAME="local_simple_sso_logs" COMMENT="Logs de auditoria e autenticação SSO">
       <FIELDS>

@@ -10,8 +10,9 @@
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs & Scanner output
 *.log
+.scannerwork/
 
 # Local testing script (ignored from releases)
 test_sso.php

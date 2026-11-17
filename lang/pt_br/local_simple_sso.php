@@ -31,9 +31,12 @@ $string['invalidclient'] = 'Aplicação cliente não encontrada ou inativa.';
 $string['invalidredirecturi'] = 'A URL de redirecionamento não está autorizada na lista branca.';
 $string['jwterror'] = 'Erro ao gerar ou assinar o token JWT.';
 $string['guestnotallowed'] = 'Usuários convidados (guest) não têm permissão para autenticar via SSO.';
+$string['acessorestritoservidor'] = 'Acesso Restrito: A aplicação "{$a}" é de acesso exclusivo para servidores públicos ativos.';
+$string['acessorestritocontribuinte'] = 'Acesso Restrito: A aplicação "{$a}" é de acesso exclusivo para contribuintes / cidadãos.';
 
 // Strings da Interface de Gestão.
 $string['client_added_success'] = 'Aplicação "{$a}" cadastrada com sucesso.';
+$string['client_updated_success'] = 'Público-alvo da aplicação atualizado com sucesso.';
 $string['client_deleted_success'] = 'Aplicação removida com sucesso.';
 $string['logs_cleared_success'] = 'Histórico de logs de auditoria limpo com sucesso.';
 $string['endpoints_title'] = 'Endpoints OIDC / OAuth2 para Integração';
@@ -46,6 +49,12 @@ $string['col_name'] = 'Nome da Aplicação';
 $string['col_client_id'] = 'Client ID';
 $string['col_client_secret'] = 'Client Secret';
 $string['col_redirect_uris'] = 'URLs de Redirecionamento Permitidas (Lista Branca)';
+$string['col_audience'] = 'Público-Alvo Permitido';
+$string['audience_label'] = 'Público-Alvo com Permissão de Acesso';
+$string['audience_todos'] = 'Todos (Servidores + Contribuintes / Cidadãos)';
+$string['audience_servidor'] = 'Apenas Servidores Públicos (Ativos no RH)';
+$string['audience_contribuinte'] = 'Apenas Contribuintes / Cidadãos';
+$string['audience_help'] = 'Selecione quem tem permissão para acessar esta aplicação via SSO.';
 $string['col_actions'] = 'Ações';
 $string['delete'] = 'Excluir';
 $string['confirm_delete_client'] = 'Deseja realmente excluir esta aplicação?';

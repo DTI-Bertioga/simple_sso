@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * OIDC UserInfo endpoint returning current Moodle user profile data.
+ * OIDC UserInfo endpoint returning canonical user profile & RH active contracts.
  *
  * @package     local_simple_sso
  * @copyright   2026
@@ -104,8 +104,21 @@ if (!$decoded || empty($decoded->sub)) {
     exit;
 }
 
-// 4. Bind and fetch fresh current Moodle user data for the 'sub' username.
-$user = $DB->get_record('user', ['username' => $decoded->sub, 'deleted' => 0, 'suspended' => 0]);
+// 4. Localiza a conta do usuário no Moodle por id, username ou idnumber (CPF/Matrícula)
+$user = null;
+if (!empty($decoded->moodle_userid)) {
+    $user = $DB->get_record('user', ['id' => (int)$decoded->moodle_userid, 'deleted' => 0, 'suspended' => 0]);
+}
+
+if (!$user) {
+    $clean_sub = preg_replace('/\D/', '', $decoded->sub);
+    $user = $DB->get_record_select(
+        'user',
+        "(username = :sub OR idnumber = :sub OR REPLACE(REPLACE(REPLACE(username, '.', ''), '-', ''), ' ', '') = :clean_sub OR REPLACE(REPLACE(REPLACE(idnumber, '.', ''), '-', ''), ' ', '') = :clean_sub) AND deleted = 0 AND suspended = 0",
+        ['sub' => $decoded->sub, 'clean_sub' => $clean_sub]
+    );
+}
+
 if (!$user) {
     local_simple_sso_log_event('userinfo_access_failed', 'BLOCKED', $client_id ?? '', '', 'User not found or suspended.');
     http_response_code(404);
@@ -116,7 +129,54 @@ if (!$user) {
     exit;
 }
 
-// Fetch user cohorts/groups.
+// 5. Resolução do CPF Canônico da Pessoa Física
+$cpf_limpo = null;
+if (class_exists('\local_ponto_eletronico\identity_resolver')) {
+    $cpf_limpo = \local_ponto_eletronico\identity_resolver::resolve_cpf($user);
+}
+
+if (empty($cpf_limpo)) {
+    $clean_u  = preg_replace('/\D/', '', $user->username ?? '');
+    $clean_id = preg_replace('/\D/', '', $user->idnumber ?? '');
+    if (strlen($clean_u) === 11) {
+        $cpf_limpo = $clean_u;
+    } else if (strlen($clean_id) === 11) {
+        $cpf_limpo = $clean_id;
+    } else {
+        $cpf_limpo = $decoded->sub;
+    }
+}
+
+// 6. Consulta Vínculos Funcionais no RH
+$vinculos = [];
+if (!empty($cpf_limpo) && class_exists('\local_ponto_eletronico\external_connection')) {
+    try {
+        $extdb = \local_ponto_eletronico\external_connection::get();
+        $sql_vinculos = "SELECT Matricula, Contrato, Cod_Lotacao, Cargo, Lotacao, Descr_Secretaria
+                         FROM funcionarios
+                         WHERE (CPF = ? OR REPLACE(REPLACE(REPLACE(CPF, '.', ''), '-', ''), ' ', '') = ?)
+                           AND (Encerrado IS NULL OR UPPER(TRIM(Encerrado)) NOT LIKE 'SIM%')
+                         ORDER BY Contrato ASC";
+        $records_vh = $extdb->get_records_sql($sql_vinculos, [$cpf_limpo, $cpf_limpo]);
+
+        foreach ($records_vh as $vh) {
+            $vinculos[] = [
+                'matricula'        => (int)($vh->matricula ?? $vh->Matricula),
+                'contrato'         => (int)($vh->contrato ?? $vh->Contrato),
+                'cod_lotacao'      => trim($vh->cod_lotacao ?? $vh->Cod_Lotacao ?? ''),
+                'cargo'            => trim($vh->cargo ?? $vh->Cargo ?? ''),
+                'lotacao'          => trim($vh->lotacao ?? $vh->Lotacao ?? ''),
+                'descr_secretaria' => trim($vh->descr_secretaria ?? $vh->Descr_Secretaria ?? '')
+            ];
+        }
+    } catch (\Throwable $e) {
+        debugging('Erro ao buscar vínculos funcionais no UserInfo: ' . $e->getMessage());
+    }
+}
+
+$user_type = !empty($vinculos) ? 'servidor' : 'contribuinte';
+
+// Cohorts / Grupos do Moodle
 require_once($CFG->dirroot . '/cohort/lib.php');
 $groups = [];
 $user_cohorts = cohort_get_user_cohorts($user->id);
@@ -128,12 +188,17 @@ if (!empty($user_cohorts)) {
 
 local_simple_sso_log_event('userinfo_access', 'SUCCESS', $decoded->aud ?? $client_id ?? '', '', '', '', $user->id);
 
-// 5. Return current user profile data in standard OIDC UserInfo format.
+// 7. Retorna dados do perfil unificado no formato OIDC UserInfo
 echo json_encode([
-    'sub'         => $user->username,
-    'email'       => $user->email,
-    'given_name'  => $user->firstname,
-    'family_name' => $user->lastname,
-    'name'        => fullname($user),
-    'groups'      => array_values(array_unique($groups))
+    'sub'           => $cpf_limpo,               // CPF único do cidadão/servidor
+    'moodle_userid' => (int)$user->id,
+    'username'      => $user->username,
+    'email'         => $user->email,
+    'given_name'    => $user->firstname,
+    'family_name'   => $user->lastname,
+    'name'          => fullname($user),
+    'user_type'     => $user_type,               // 'servidor' ou 'contribuinte'
+    'auth_method'   => $user->auth,
+    'vinculos'      => $vinculos,                // Vínculos funcionais ativos no RH
+    'groups'        => array_values(array_unique($groups))
 ]);

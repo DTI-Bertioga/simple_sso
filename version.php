@@ -2,7 +2,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_simple_sso';
-$plugin->version   = 2026080304;
-$plugin->requires  = 2022111800; // Moodle 4.1+
+$plugin->version   = 2026110505;
+$plugin->requires  = 2022111800;
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.1.0';
+$plugin->release   = 'v1.2.1';

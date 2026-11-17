@@ -151,3 +151,155 @@ function local_simple_sso_log_event(
         return false;
     }
 }
+
+/**
+ * Base64URL encodes data according to RFC 7515 / RFC 7636.
+ *
+ * @param string $data Raw binary data.
+ * @return string Base64url encoded string.
+ */
+function local_simple_sso_base64url_encode(string $data): string {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+
+/**
+ * Ensures that the local_simple_sso_codes database table exists.
+ */
+function local_simple_sso_ensure_codes_table_exists(): void {
+    global $DB;
+    $dbman = $DB->get_manager();
+    if (!$dbman->table_exists('local_simple_sso_codes')) {
+        $table = new \xmldb_table('local_simple_sso_codes');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('code', XMLDB_TYPE_CHAR, '128', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('client_id', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('redirect_uri', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('code_challenge', XMLDB_TYPE_CHAR, '128', null, null, null, null);
+        $table->add_field('code_challenge_method', XMLDB_TYPE_CHAR, '10', null, null, null, 'S256');
+        $table->add_field('expires_at', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('code_uniq', XMLDB_KEY_UNIQUE, ['code']);
+
+        $table->add_index('client_id_idx', XMLDB_INDEX_NOTUNIQUE, ['client_id']);
+        $table->add_index('userid_idx', XMLDB_INDEX_NOTUNIQUE, ['userid']);
+        $table->add_index('expires_at_idx', XMLDB_INDEX_NOTUNIQUE, ['expires_at']);
+
+        $dbman->create_table($table);
+    }
+}
+
+/**
+ * Generates and stores a temporary authorization code for PKCE / OAuth2 authorization code flow.
+ *
+ * @param string $client_id Client ID requesting authorization.
+ * @param int $userid Authenticated Moodle user ID.
+ * @param string $redirect_uri Authorized redirect URI.
+ * @param string|null $code_challenge PKCE Code Challenge string.
+ * @param string $code_challenge_method Challenge method ('S256' or 'plain').
+ * @return string Generated 64-character authorization code.
+ */
+function local_simple_sso_generate_auth_code(
+    string $client_id,
+    int $userid,
+    string $redirect_uri,
+    ?string $code_challenge = null,
+    string $code_challenge_method = 'S256'
+): string {
+    global $DB;
+
+    local_simple_sso_ensure_codes_table_exists();
+
+    // Purge expired authorization codes.
+    $DB->delete_records_select('local_simple_sso_codes', 'expires_at < ?', [time()]);
+
+    $code = bin2hex(random_bytes(32));
+
+    $record = new \stdClass();
+    $record->code                  = $code;
+    $record->client_id             = $client_id;
+    $record->userid                = $userid;
+    $record->redirect_uri          = $redirect_uri;
+    $record->code_challenge        = trim((string)$code_challenge);
+    $record->code_challenge_method = strtoupper(trim($code_challenge_method));
+    $record->expires_at            = time() + 300; // 5 minutes lifetime.
+    $record->timecreated           = time();
+
+    $DB->insert_record('local_simple_sso_codes', $record);
+
+    return $code;
+}
+
+/**
+ * Consumes and validates a single-use authorization code and PKCE code_verifier.
+ *
+ * @param string $code Authorization code.
+ * @param string $client_id Client ID exchanging the code.
+ * @param string|null $code_verifier PKCE Code Verifier string provided by client.
+ * @param string|null &$error_out Variable reference to store failure reason if invalid.
+ * @return \stdClass|null Returns code record object if valid, null otherwise.
+ */
+function local_simple_sso_consume_auth_code(
+    string $code,
+    string $client_id,
+    ?string $code_verifier = null,
+    ?string &$error_out = null
+): ?\stdClass {
+    global $DB;
+
+    local_simple_sso_ensure_codes_table_exists();
+
+    $record = $DB->get_record('local_simple_sso_codes', ['code' => trim($code)]);
+    if (!$record) {
+        $error_out = 'Authorization code not found in database or already consumed.';
+        return null;
+    }
+
+    // Delete record immediately for single-use guarantee.
+    $DB->delete_records('local_simple_sso_codes', ['id' => $record->id]);
+
+    // Check expiration.
+    if ((int)$record->expires_at < time()) {
+        $error_out = 'Authorization code has expired (exceeded 5 minutes).';
+        return null;
+    }
+
+    // Check client_id match.
+    if (trim($record->client_id) !== trim($client_id)) {
+        $error_out = 'Client ID mismatch. Saved: ' . $record->client_id . ' Provided: ' . $client_id;
+        return null;
+    }
+
+    // Validate PKCE code_verifier if code_challenge was saved during authorization.
+    if (!empty($record->code_challenge)) {
+        $verifier = trim((string)$code_verifier);
+        if (empty($verifier)) {
+            $error_out = 'Missing code_verifier parameter in token request.';
+            return null;
+        }
+
+        $saved_challenge = trim($record->code_challenge);
+        $method          = strtoupper(trim($record->code_challenge_method ?? 'S256'));
+
+        if ($method === 'S256' || $method === 'S') {
+            $computed_challenge = local_simple_sso_base64url_encode(hash('sha256', $verifier, true));
+            if (!hash_equals($saved_challenge, $computed_challenge)) {
+                $error_out = 'PKCE Verification Failed! Saved Challenge: [' . $saved_challenge . '] vs Computed: [' . $computed_challenge . '] for Verifier: [' . $verifier . ']';
+                return null;
+            }
+        } else if ($method === 'PLAIN') {
+            if (!hash_equals($saved_challenge, $verifier)) {
+                $error_out = 'PKCE Plain Verification Failed!';
+                return null;
+            }
+        } else {
+            $error_out = 'Unsupported code_challenge_method: ' . $method;
+            return null;
+        }
+    }
+
+    return $record;
+}
