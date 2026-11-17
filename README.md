@@ -14,7 +14,7 @@ Allows integrating third-party external applications (such as GLPI, mobile apps 
 
 - **PKCE Support (RFC 7636):** Full Proof Key for Code Exchange implementation (Authorization Code Flow) designed for secure authentication in Mobile Apps and Single Page Applications (SPAs) without exposing `client_secret`.
 - **OIDC Strict Mode (`#token=`) & Legacy Query Mode (`?token=`):** Supports URI fragment redirection (`#token=...`) to prevent token leakage in HTTP server logs and `Referer` headers, alongside legacy query parameter mode for backend PHP applications.
-- **Canonical Physical Person Identity (`sub`):** Resolves and emits the user's canonical ID as `sub` to guarantee single-person identity mapping across multiple login methods (Google OAuth2, LDAP, Manual).
+- **Canonical ID (`sub`):** Resolves and emits the user's canonical ID as `sub` to guarantee single-person identity mapping across multiple login methods (Google OAuth2, LDAP, Manual).
 - **HR Employee Records & Claims (`vinculos`):** Embeds employee contract details (matricula, contrato, cargo, lotacao, secretaria) into the JWT token claims.
 - **Target Audience Restriction (`allowed_audience`):** Per-client access restriction (`todos`, `servidor`, `contribuinte`) with automated authorization blocking.
 - **Multi-Tenant / Multi-Client Management:** Register and manage multiple client applications with unique `client_id`, `client_secret`, and allowed URI whitelists.
