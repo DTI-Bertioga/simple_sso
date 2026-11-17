@@ -6,7 +6,7 @@
 
 A native Moodle (4.1+) plugin that acts as a **Single Sign-On (SSO)** and **OpenID Connect (OIDC)** provider supporting **Implicit Flow**, **Authorization Code Flow with PKCE (RFC 7636)**, and **Signed JWTs (HMAC-SHA256 / `HS256`)**.
 
-Allows integrating third-party external applications (such as GLPI, mobile apps in Flutter / React Native, SPAs, corporate portals, or custom web apps) to authenticate users with Moodle credentials, canonical physical person identity (CPF), and HR employee claims.
+Allows integrating third-party external applications (such as GLPI, mobile apps in Flutter / React Native, SPAs, corporate portals, or custom web apps) to authenticate users with Moodle credentials, canonical ID, and HR employee claims.
 
 ---
 
@@ -207,7 +207,7 @@ local/simple_sso/
 │   └── manage.mustache         # Mustache UI template for administration panel
 ├── authorize.php               # Main SSO / OIDC authorization endpoint
 ├── lib.php                     # Core helper functions (whitelist validation, PKCE, audit logging)
-├── link_account.php            # First-access Google/OAuth2 CPF link page
+├── link_account.php            # First-access Google/OAuth2 Canonical ID link page
 ├── login.php                   # Simplified login redirect endpoint
 ├── manage.php                  # Administration UI controller & audit log viewer
 ├── settings.php                # Moodle admin navigation menu integration
